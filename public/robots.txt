@@ -1,3 +1,3 @@
-# https://www.robotstxt.org/robotstxt.html
-User-agent: *
-Disallow:
+Hi yay!
+
+Just a simplete website why you want to hack it huh? 🫣

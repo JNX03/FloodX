@@ -21,26 +21,10 @@ const App = () => {
   const [loading, setLoading] = useState(false);
 
   const stations = [
-    {
-      name: 'สถานี P.1 สะพานนวรัฐ แม่น้ำปิง ต.วัดเกต อ.เมือง จ.เชียงใหม่',
-      coords: [18.788450, 99.004095],
-      code: 'P.1',
-    },
-    {
-      name: 'สถานี P.75 บ้านแม่แต แม่น้ำปิง ต.แม่แฝกเก่า อ.สันทราย จ.เชียงใหม่',
-      coords: [19.007223200081377, 98.96455139541524],
-      code: 'P.75',
-    },
-    {
-      name: 'สถานี P.20 อ.เชียงดาว จ.เชียงใหม่',
-      coords: [19.369550704956055, 98.969100952148438],
-      code: 'P.20',
-    },
-    {
-      name: 'สถานี P.67 อ.สันทราย จ.เชียงใหม่',
-      coords: [18.933161, 99.033818],
-      code: 'P.67',
-    },
+    { name: 'P.1 สะพานนวรัฐ', coords: [18.788450, 99.004095], code: 'P.1', weather: 'Sunny, 25°C' },
+    { name: 'P.75 บ้านแม่แต', coords: [19.007223, 98.964551], code: 'P.75', weather: 'Cloudy, 22°C' },
+    { name: 'P.20 เชียงดาว', coords: [19.369551, 98.969101], code: 'P.20', weather: 'Rainy, 18°C' },
+    { name: 'P.67 สันทราย', coords: [18.933161, 99.033818], code: 'P.67', weather: 'Foggy, 20°C' },
   ];
 
   const toggleDarkMode = () => {
@@ -54,6 +38,8 @@ const App = () => {
         const lng = position.coords.longitude;
         setMapCenter([lat, lng]);
         setUserLocation([lat, lng]);
+      }, () => {
+        alert('Unable to retrieve location.');
       });
     } else {
       alert('Geolocation is not supported by this browser.');
@@ -62,7 +48,7 @@ const App = () => {
 
   const handleSearch = (e) => {
     if (e.key === 'Enter') {
-      const query = e.target.value;
+      const query = encodeURIComponent(e.target.value.trim());
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
         .then((response) => response.json())
         .then((data) => {
@@ -74,8 +60,7 @@ const App = () => {
             alert('Location not found');
           }
         })
-        .catch((error) => {
-          console.error('Error:', error);
+        .catch(() => {
           alert('An error occurred while searching for the location.');
         });
     }
@@ -90,20 +75,13 @@ const App = () => {
         },
         body: JSON.stringify({ hydro: { stationcode: stationCode } }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data for station ${stationCode}. Status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error('Network response was not ok');
       const textData = await response.text();
-      if (!textData || textData.trim() === '') {
-        return { stationCode, error: 'No data available.' };
-      }
-
+      if (!textData || textData.trim() === '') return { stationCode, error: 'No data available.' };
       try {
         const jsonData = JSON.parse(textData);
         return { stationCode, data: jsonData };
-      } catch (error) {
+      } catch {
         return { stationCode, error: 'Invalid JSON format.' };
       }
     } catch (error) {
@@ -113,35 +91,28 @@ const App = () => {
 
   useEffect(() => {
     if (selectedStation && selectedStation.code) {
-      const fetchSelectedStationData = async () => {
-        setLoading(true);
-        const data = await fetchStationData(selectedStation.code);
-        setStationData((prevData) => ({
-          ...prevData,
-          [selectedStation.code]: data,
-        }));
+      setLoading(true);
+      fetchStationData(selectedStation.code).then(data => {
+        setStationData(prevData => ({ ...prevData, [selectedStation.code]: data }));
         setLoading(false);
-      };
-
-      fetchSelectedStationData();
+      });
     }
   }, [selectedStation]);
 
   useEffect(() => {
-    const fetchAllStations = async () => {
-      for (let station of stations) {
-        const data = await fetchStationData(station.code);
-        setStationData((prevData) => ({
-          ...prevData,
-          [station.code]: data,
-        }));
-      }
-    };
-    fetchAllStations();
+    stations.forEach(station => {
+      fetchStationData(station.code).then(data => {
+        setStationData(prevData => ({ ...prevData, [station.code]: data }));
+      });
+    });
 
     const interval = setInterval(() => {
-      fetchAllStations();
-    }, 60000); // Update every 60 seconds
+      stations.forEach(station => {
+        fetchStationData(station.code).then(data => {
+          setStationData(prevData => ({ ...prevData, [station.code]: data }));
+        });
+      });
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -152,35 +123,24 @@ const App = () => {
 
   const getWaterHeight = (code) => {
     const data = stationData[code];
-    if (data && data.data && data.data.length > 0) {
-      const height = data.data[0]?.waterlevelvalue;
-      return height ? parseFloat(height).toFixed(3) : 'N/A';
-    }
-    return 'N/A';
+    return data?.data?.[0]?.waterlevelvalue ? parseFloat(data.data[0].waterlevelvalue).toFixed(3) : 'N/A';
   };
 
   const getMarkerColor = (code) => {
     const height = parseFloat(getWaterHeight(code));
     if (isNaN(height)) return 'blue';
     if (height < 5) return 'green';
-    if (height >= 5 && height < 8) return 'orange';
-    if (height >= 8) return 'red';
-    return 'blue';
+    if (height < 8) return 'orange';
+    return 'red';
   };
 
   const refreshData = () => {
     if (selectedStation && selectedStation.code) {
-      const fetchSelectedStationData = async () => {
-        setLoading(true);
-        const data = await fetchStationData(selectedStation.code);
-        setStationData((prevData) => ({
-          ...prevData,
-          [selectedStation.code]: data,
-        }));
+      setLoading(true);
+      fetchStationData(selectedStation.code).then(data => {
+        setStationData(prevData => ({ ...prevData, [selectedStation.code]: data }));
         setLoading(false);
-      };
-
-      fetchSelectedStationData();
+      });
     }
   };
 
@@ -188,23 +148,12 @@ const App = () => {
     <div className={isDarkMode ? 'dark-mode' : ''}>
       <div className="right-menu">
         <div className="menu-buttons">
-          <button className="home-button" onClick={handleHomeClick}>
-            <i className="fa fa-home"></i> Home
-          </button>
+          <button className="home-button" onClick={handleHomeClick}><i className="fa fa-home"></i> Home</button>
           <p>Jxxn03 - FloodMap</p>
-          <button className="dark-mode-button" onClick={toggleDarkMode}>
-            <i className={isDarkMode ? 'fa fa-sun-o' : 'fa fa-moon-o'}></i>
-          </button>
-          <button className="refresh-button" onClick={refreshData}>
-            <i className="fa fa-refresh"></i>
-          </button>
+          <button className="dark-mode-button" onClick={toggleDarkMode}><i className={isDarkMode ? 'fa fa-sun-o' : 'fa fa-moon-o'}></i></button>
+          <button className="refresh-button" onClick={refreshData}><i className="fa fa-refresh"></i></button>
         </div>
-        <input
-          type="text"
-          className="search-bar"
-          placeholder="Search for a place..."
-          onKeyPress={handleSearch}
-        />
+        <input type="text" className="search-bar" placeholder="Search for a place..." onKeyPress={handleSearch} />
         <h2>Station Details</h2>
         {loading ? (
           <p>Loading...</p>
@@ -212,6 +161,7 @@ const App = () => {
           <>
             <h3>{selectedStation.name}</h3>
             <p><strong>Station Code:</strong> {selectedStation.code}</p>
+            <p><strong>Weather:</strong> {selectedStation.weather}</p>
             {stationData[selectedStation.code].error ? (
               <p>{stationData[selectedStation.code].error}</p>
             ) : (
@@ -221,10 +171,7 @@ const App = () => {
                 <p><strong>Province:</strong> {stationData[selectedStation.code].data[0]?.provincename ?? 'N/A'}</p>
                 <p><strong>Last Updated:</strong> {stationData[selectedStation.code].data[0]?.hourlydateString ?? 'N/A'}</p>
                 <p><strong>Ground Level (ZG):</strong> {stationData[selectedStation.code].data[0]?.ZG ?? 'N/A'} m</p>
-                <p><strong>Braelevel:</strong> {stationData[selectedStation.code].data[0]?.braelevel ?? 'N/A'} m</p>
-                <p style={{ color: getMarkerColor(selectedStation.code) === 'red' ? 'red' : getMarkerColor(selectedStation.code) === 'orange' ? 'orange' : 'green' }}>
-                  <strong>Flood Status:</strong> {getMarkerColor(selectedStation.code) === 'red' ? 'Danger' : getMarkerColor(selectedStation.code) === 'orange' ? 'Warning' : 'Normal'}
-                </p>
+                <p style={{ color: getMarkerColor(selectedStation.code) }}>{getMarkerColor(selectedStation.code) === 'red' ? 'Danger' : getMarkerColor(selectedStation.code) === 'orange' ? 'Warning' : 'Normal'}</p>
               </>
             )}
           </>
@@ -234,17 +181,10 @@ const App = () => {
       </div>
       <MapContainer center={mapCenter} zoom={10} className="map-container">
         <TileLayer
-          url={
-            isDarkMode
-              ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-              : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          }
-          attribution="Made with 🩷 by Jxxn03 | Data from floodmap.net & ศูนย์อุทกวิทยาชลประทาน"
+          url={isDarkMode ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+          attribution="Made with 🩷 by Jxxn03"
         />
-        <TileLayer
-          url="https://www.floodmap.net/getFMTile.ashx?x={x}&y={y}&z={z}&e=311"
-          opacity={0.5}
-        />
+        <TileLayer url="https://www.floodmap.net/getFMTile.ashx?x={x}&y={y}&z={z}&e=311" opacity={0.5} />
         {stations.map((station, index) => (
           <Marker
             key={index}
@@ -253,13 +193,12 @@ const App = () => {
               className: `custom-marker-${getMarkerColor(station.code)}`,
               html: `<i class='fa fa-map-marker' style='color:${getMarkerColor(station.code)}; font-size: 24px;'></i>`,
             })}
-            eventHandlers={{
-              click: () => handleMarkerClick(station),
-            }}
+            eventHandlers={{ click: () => handleMarkerClick(station) }}
           >
             <Popup>
               <h3>{station.name}</h3>
               <p><strong>Station Code:</strong> {station.code}</p>
+              <p><strong>Weather:</strong> {station.weather}</p>
             </Popup>
           </Marker>
         ))}
