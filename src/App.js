@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import './App.css';
 import 'font-awesome/css/font-awesome.min.css';
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import PingRiver from './PingRiver';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -21,10 +23,10 @@ const App = () => {
   const [loading, setLoading] = useState(false);
 
   const stations = [
-    { name: 'P.1 สะพานนวรัฐ', coords: [18.788450, 99.004095], code: 'P.1', weather: 'Sunny, 25°C' },
-    { name: 'P.75 บ้านแม่แต', coords: [19.007223, 98.964551], code: 'P.75', weather: 'Cloudy, 22°C' },
-    { name: 'P.20 เชียงดาว', coords: [19.369551, 98.969101], code: 'P.20', weather: 'Rainy, 18°C' },
-    { name: 'P.67 สันทราย', coords: [18.933161, 99.033818], code: 'P.67', weather: 'Foggy, 20°C' },
+    { name: 'P.1 สะพานนวรัฐ', coords: [18.788450, 99.004095], code: 'P.1', weather: 'Null' },
+    { name: 'P.75 บ้านแม่แต', coords: [19.007223, 98.964551], code: 'P.75', weather: 'Null' },
+    { name: 'P.20 เชียงดาว', coords: [19.369551, 98.969101], code: 'P.20', weather: 'Null' },
+    { name: 'P.67 สันทราย', coords: [18.933161, 99.033818], code: 'P.67', weather: 'Null' },
   ];
 
   const toggleDarkMode = () => {
@@ -145,71 +147,84 @@ const App = () => {
   };
 
   return (
-    <div className={isDarkMode ? 'dark-mode' : ''}>
-      <div className="right-menu">
-        <div className="menu-buttons">
-          <button className="home-button" onClick={handleHomeClick}><i className="fa fa-home"></i> Home</button>
-          <p>Jxxn03 - FloodMap</p>
-          <button className="dark-mode-button" onClick={toggleDarkMode}><i className={isDarkMode ? 'fa fa-sun-o' : 'fa fa-moon-o'}></i></button>
-          <button className="refresh-button" onClick={refreshData}><i className="fa fa-refresh"></i></button>
-        </div>
-        <input type="text" className="search-bar" placeholder="Search for a place..." onKeyPress={handleSearch} />
-        <h2>Station Details</h2>
-        {loading ? (
-          <p>Loading...</p>
-        ) : selectedStation && stationData[selectedStation.code] ? (
-          <>
-            <h3>{selectedStation.name}</h3>
-            <p><strong>Station Code:</strong> {selectedStation.code}</p>
-            <p><strong>Weather:</strong> {selectedStation.weather}</p>
-            {stationData[selectedStation.code].error ? (
-              <p>{stationData[selectedStation.code].error}</p>
-            ) : (
-              <>
-                <p><strong>Current Water Level:</strong> {stationData[selectedStation.code].data[0]?.waterlevelvalue ?? 'N/A'} m</p>
-                <p><strong>Flow Rate (Q):</strong> {stationData[selectedStation.code].data[0]?.Q ?? 'N/A'} m³/s</p>
-                <p><strong>Province:</strong> {stationData[selectedStation.code].data[0]?.provincename ?? 'N/A'}</p>
-                <p><strong>Last Updated:</strong> {stationData[selectedStation.code].data[0]?.hourlydateString ?? 'N/A'}</p>
-                <p><strong>Ground Level (ZG):</strong> {stationData[selectedStation.code].data[0]?.ZG ?? 'N/A'} m</p>
-                <p style={{ color: getMarkerColor(selectedStation.code) }}>{getMarkerColor(selectedStation.code) === 'red' ? 'Danger' : getMarkerColor(selectedStation.code) === 'orange' ? 'Warning' : 'Normal'}</p>
-              </>
-            )}
-          </>
-        ) : (
-          <p>Select a station on the map to see details.</p>
-        )}
-      </div>
-      <MapContainer center={mapCenter} zoom={10} className="map-container">
-        <TileLayer
-          url={isDarkMode ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
-          attribution="Made with 🩷 by Jxxn03"
-        />
-        <TileLayer url="https://www.floodmap.net/getFMTile.ashx?x={x}&y={y}&z={z}&e=311" opacity={0.5} />
-        {stations.map((station, index) => (
-          <Marker
-            key={index}
-            position={station.coords}
-            icon={L.divIcon({
-              className: `custom-marker-${getMarkerColor(station.code)}`,
-              html: `<i class='fa fa-map-marker' style='color:${getMarkerColor(station.code)}; font-size: 24px;'></i>`,
-            })}
-            eventHandlers={{ click: () => handleMarkerClick(station) }}
-          >
-            <Popup>
-              <h3>{station.name}</h3>
-              <p><strong>Station Code:</strong> {station.code}</p>
-              <p><strong>Weather:</strong> {station.weather}</p>
-            </Popup>
-          </Marker>
-        ))}
-        {userLocation && <Marker position={userLocation} />}
-      </MapContainer>
-      <div className="middle-menu">
-        <p>Jxxn03 - FloodMap</p>
-        <p>P.1 Water Height: {getWaterHeight('P.1')} m</p>
-        <p>P.75 Water Height: {getWaterHeight('P.75')} m</p>
-      </div>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={
+          <div className={isDarkMode ? 'dark-mode' : ''}>
+            <div className="right-menu">
+              <div className="menu-buttons">
+                <button className="home-button" onClick={handleHomeClick}><i className="fa fa-home"></i> Home</button>
+                <p>Jxxn03 - FloodMap</p>
+                <button className="dark-mode-button" onClick={toggleDarkMode}><i className={isDarkMode ? 'fa fa-sun-o' : 'fa fa-moon-o'}></i></button>
+                <button className="refresh-button" onClick={refreshData}><i className="fa fa-refresh"></i></button>
+              </div>
+              <input type="text" className="search-bar" placeholder="Search for a place..." onKeyPress={handleSearch} />
+              <h2>Station Details</h2>
+              {loading ? (
+                <p>Loading...</p>
+              ) : selectedStation && stationData[selectedStation.code] ? (
+                <>
+                  <h3>{selectedStation.name}</h3>
+                  <p><strong>Station Code:</strong> {selectedStation.code}</p>
+                  <p><strong>Current Water Level:</strong> {getWaterHeight(selectedStation.code)} m</p>
+                  <p><strong>Weather:</strong> {selectedStation.weather}</p>
+                  {stationData[selectedStation.code].error ? (
+                    <p>{stationData[selectedStation.code].error}</p>
+                  ) : (
+                    <>
+                      <p><strong>Flow Rate (Q):</strong> {stationData[selectedStation.code].data[0]?.Q ?? 'N/A'} m³/s</p>
+                      <p><strong>Province:</strong> {stationData[selectedStation.code].data[0]?.provincename ?? 'N/A'}</p>
+                      <p><strong>Last Updated:</strong> {stationData[selectedStation.code].data[0]?.hourlydateString ?? 'N/A'}</p>
+                      <p><strong>Ground Level (ZG):</strong> {stationData[selectedStation.code].data[0]?.ZG ?? 'N/A'} m</p>
+                      <p style={{ color: getMarkerColor(selectedStation.code) }}>{getMarkerColor(selectedStation.code) === 'red' ? 'Danger' : getMarkerColor(selectedStation.code) === 'orange' ? 'Warning' : 'Normal'}</p>
+                    </>
+                  )}
+                </>
+              ) : (
+                <p>Select a station on the map to see details.</p>
+              )}
+            </div>
+            <MapContainer center={mapCenter} zoom={10} className="map-container">
+              <TileLayer
+                url={isDarkMode ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
+                attribution="Made with 🩷 by Jxxn03"
+              />
+              <TileLayer url="https://www.floodmap.net/getFMTile.ashx?x={x}&y={y}&z={z}&e=311" opacity={0.5} />
+              {stations.map((station, index) => (
+                <Marker
+                  key={index}
+                  position={station.coords}
+                  icon={L.divIcon({
+                    className: `custom-marker-${getMarkerColor(station.code)}`,
+                    html: `<i class='fa fa-map-marker' style='color:${getMarkerColor(station.code)}; font-size: 24px;'></i>`,
+                  })}
+                  eventHandlers={{ click: () => handleMarkerClick(station) }}
+                >
+                  <Popup>
+                    <h3>{station.name}</h3>
+                    <p><strong>Station Code:</strong> {station.code}</p>
+                    <p><strong>Weather:</strong> {station.weather}</p>
+                    <p><strong>Current Water Level:</strong> {getWaterHeight(station.code)} m</p>
+                  </Popup>
+                </Marker>
+              ))}
+              {userLocation && <Marker position={userLocation} />}
+            </MapContainer>
+            <div className="top-menu">
+              <Link to="/ping-river" className="ping-river-button"><i className="fa fa-water"></i> Ping River Level 💧</Link>
+            </div>
+            <div className="middle-menu">
+              <p>Jxxn03 - FloodMap</p>
+              <p>P.1 Water Height: {getWaterHeight('P.1')} m</p>
+              <p>P.20 Water Height: {getWaterHeight('P.20')} m</p>
+              <p>P.67 Water Height: {getWaterHeight('P.67')} m</p>
+              <p>P.75 Water Height: {getWaterHeight('P.75')} m</p>
+            </div>
+          </div>
+        } />
+        <Route path="/ping-river" element={<PingRiver />} />
+      </Routes>
+    </Router>
   );
 };
 
