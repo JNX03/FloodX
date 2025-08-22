@@ -1,18 +1,48 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import moment from 'moment';
+import { FaDownload, FaArrowLeft, FaSync } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import './PingRiver.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-const PingRiver = () => {
+const PingRiver = ({ addNotification }) => {
   const [data, setData] = useState([]);
   const [displayData, setDisplayData] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [error, setError] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const generatePredictions = useCallback((historicalData) => {
+    const waterLevels = historicalData.map(entry => {
+      const waterLevelKey = Object.keys(entry).find(key => key.includes('ระดับน้ำ'));
+      return parseFloat(entry[waterLevelKey]);
+    }).filter(level => !isNaN(level));
+
+    const recentTrend = calculateRecentTrend(waterLevels);
+    const lastWaterLevel = waterLevels[waterLevels.length - 1];
+
+    const predictions = [];
+    const lastTimestamp = moment(historicalData[historicalData.length - 1]['เวลา'], ['DD/MM/YYYY HH:mm', 'HH:mm น.']);
+
+    for (let i = 1; i <= 24; i++) {
+      const predictedTimestamp = lastTimestamp.clone().add(i, 'hours');
+      let predictedValue = lastWaterLevel + (recentTrend * i) + (Math.random() - 0.5) * 0.05;
+      const maxChange = 0.1;
+      predictedValue = Math.max(lastWaterLevel - maxChange, Math.min(lastWaterLevel + maxChange, predictedValue));
+      
+      predictions.push({
+        time: predictedTimestamp.isValid() ? predictedTimestamp.format('DD/MM/YYYY HH:mm') : 'Invalid date',
+        value: Number(predictedValue.toFixed(2))
+      });
+    }
+
+    return predictions;
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,37 +69,13 @@ const PingRiver = () => {
         setPredictions(predictedData);
       } catch (err) {
         setError('Failed to fetch data. Please try again later.');
+        if (addNotification) {
+          addNotification('error', 'Data Fetch Failed', 'Unable to load Ping River data');
+        }
       }
     };
     fetchData();
-  }, [visibleCount]);
-
-  const generatePredictions = (historicalData) => {
-    const waterLevels = historicalData.map(entry => {
-      const waterLevelKey = Object.keys(entry).find(key => key.includes('ระดับน้ำ'));
-      return parseFloat(entry[waterLevelKey]);
-    }).filter(level => !isNaN(level));
-
-    const recentTrend = calculateRecentTrend(waterLevels);
-    const lastWaterLevel = waterLevels[waterLevels.length - 1];
-
-    const predictions = [];
-    const lastTimestamp = moment(historicalData[historicalData.length - 1]['เวลา'], ['DD/MM/YYYY HH:mm', 'HH:mm น.']);
-
-    for (let i = 1; i <= 24; i++) {
-      const predictedTimestamp = lastTimestamp.clone().add(i, 'hours');
-      let predictedValue = lastWaterLevel + (recentTrend * i) + (Math.random() - 0.5) * 0.05;
-      const maxChange = 0.1;
-      predictedValue = Math.max(lastWaterLevel - maxChange, Math.min(lastWaterLevel + maxChange, predictedValue));
-      
-      predictions.push({
-        time: predictedTimestamp.isValid() ? predictedTimestamp.format('DD/MM/YYYY HH:mm') : 'Invalid date',
-        value: Number(predictedValue.toFixed(2))
-      });
-    }
-
-    return predictions;
-  };
+  }, [visibleCount, addNotification, generatePredictions]);
 
   const calculateRecentTrend = (waterLevels) => {
     const recentLevels = waterLevels.slice(-24);
@@ -82,6 +88,134 @@ const PingRiver = () => {
 
   const loadMoreData = () => {
     setVisibleCount(visibleCount + 10);
+  };
+
+  const exportToExcel = () => {
+    try {
+      const exportData = data.map(entry => {
+        const waterLevelKey = Object.keys(entry).find(key => key.includes('ระดับน้ำ'));
+        return {
+          'Time': entry['เวลา'],
+          'Water Level (m)': entry[waterLevelKey]
+        };
+      });
+
+      const predictionsData = predictions.map(pred => ({
+        'Time': pred.time,
+        'Predicted Water Level (m)': pred.value
+      }));
+
+      const workbook = XLSX.utils.book_new();
+      
+      // Historical data sheet
+      const historySheet = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(workbook, historySheet, 'Historical Data');
+      
+      // Predictions sheet
+      const predictionsSheet = XLSX.utils.json_to_sheet(predictionsData);
+      XLSX.utils.book_append_sheet(workbook, predictionsSheet, 'Predictions');
+      
+      // Summary sheet
+      const summaryData = [{
+        'Export Date': new Date().toLocaleString(),
+        'Total Historical Records': data.length,
+        'Total Predictions': predictions.length,
+        'Data Source': 'Ping River Level - FloodX',
+        'Prediction Algorithm': 'Trend-based with random variance'
+      }];
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+      const fileName = `ping-river-data-${moment().format('YYYY-MM-DD-HHmm')}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      
+      if (addNotification) {
+        addNotification('success', 'Data Exported', `Downloaded as ${fileName}`);
+      }
+    } catch (error) {
+      if (addNotification) {
+        addNotification('error', 'Export Failed', 'Unable to export data to Excel');
+      }
+    }
+  };
+
+  const exportToJSON = () => {
+    try {
+      const exportData = {
+        metadata: {
+          exportDate: new Date().toISOString(),
+          source: 'Ping River Level - FloodX',
+          totalRecords: data.length,
+          totalPredictions: predictions.length
+        },
+        historicalData: data.map(entry => {
+          const waterLevelKey = Object.keys(entry).find(key => key.includes('ระดับน้ำ'));
+          return {
+            time: entry['เวลา'],
+            waterLevel: parseFloat(entry[waterLevelKey]),
+            raw: entry
+          };
+        }),
+        predictions: predictions.map(pred => ({
+          time: pred.time,
+          predictedWaterLevel: pred.value
+        }))
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ping-river-data-${moment().format('YYYY-MM-DD-HHmm')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      if (addNotification) {
+        addNotification('success', 'Data Exported', 'Downloaded as JSON file');
+      }
+    } catch (error) {
+      if (addNotification) {
+        addNotification('error', 'Export Failed', 'Unable to export data to JSON');
+      }
+    }
+  };
+
+  const refreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      const dateToday = moment().format('YYYY-MM-DD');
+      const dateStart = moment().subtract(7, 'days').format('YYYY-MM-DD');
+      const downloadUrl = `http://localhost:5000/proxy?datestart=${dateStart}&dateend=${dateToday}`;
+      const downloadResponse = await fetch(downloadUrl);
+      if (!downloadResponse.ok) {
+        throw new Error('Failed to download file');
+      }
+      const fileResponse = await fetch('http://localhost:5000/download');
+      if (!fileResponse.ok) {
+        throw new Error('Failed to fetch the saved file');
+      }
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      setData(jsonData);
+      setDisplayData(jsonData.slice(0, visibleCount));
+      
+      const predictedData = generatePredictions(jsonData);
+      setPredictions(predictedData);
+      setError(null);
+      
+      if (addNotification) {
+        addNotification('success', 'Data Refreshed', 'Latest data has been loaded');
+      }
+    } catch (err) {
+      setError('Failed to refresh data. Please try again later.');
+      if (addNotification) {
+        addNotification('error', 'Refresh Failed', 'Unable to load latest data');
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const chartData = {
@@ -147,7 +281,37 @@ const PingRiver = () => {
 
   return (
     <div className="ping-river-container">
-      <h3>Ping River Water Level Prediction</h3>
+      <div className="ping-river-header">
+        <div className="header-left">
+          <Link to="/" className="back-button">
+            <FaArrowLeft /> Back to Map
+          </Link>
+          <div className="page-title">
+            <h2>📊 Ping River Analytics</h2>
+            <p>AI-Powered Water Level Prediction & Analysis</p>
+          </div>
+        </div>
+        <div className="header-actions">
+          <button 
+            className="action-button refresh-btn" 
+            onClick={refreshData}
+            disabled={isRefreshing}
+            title="Refresh Data"
+          >
+            <FaSync className={isRefreshing ? 'spinning' : ''} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <div className="export-dropdown">
+            <button className="action-button export-btn">
+              <FaDownload /> Export Data
+            </button>
+            <div className="dropdown-content">
+              <button onClick={exportToExcel}>📊 Excel Format</button>
+              <button onClick={exportToJSON}>💾 JSON Format</button>
+            </div>
+          </div>
+        </div>
+      </div>
       {error ? (
         <p className="error-message">{error}</p>
       ) : (
