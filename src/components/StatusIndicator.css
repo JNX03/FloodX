@@ -1,0 +1,153 @@
+.status-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.status-connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-icon {
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.status-icon.connected {
+  color: #10b981;
+}
+
+.status-icon.disconnected {
+  color: #ef4444;
+}
+
+.status-icon.reconnecting {
+  color: #f59e0b;
+  animation: pulse 1.5s infinite;
+}
+
+.status-icon.loading {
+  color: #3b82f6;
+  animation: spin 1s linear infinite;
+}
+
+.status-text {
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-update {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.status-label {
+  color: #94a3b8;
+}
+
+.status-time {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+/* Status-specific styling */
+.status-connected {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.status-disconnected {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.status-reconnecting {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.status-loading {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .status-indicator {
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 10px;
+  }
+  
+  .status-connection {
+    gap: 6px;
+  }
+  
+  .status-text {
+    font-size: 11px;
+  }
+  
+  .status-update {
+    font-size: 10px;
+  }
+}
+
+.status-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.status-error {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.reset-api-btn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reset-api-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
