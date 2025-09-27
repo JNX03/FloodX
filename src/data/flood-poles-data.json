@@ -1,0 +1,94 @@
+{
+  "flood_poles": [
+    {
+      "id": 1,
+      "code": "E01",
+      "location": "สามแยกถนนกลองทราย",
+      "location_en": "Klong Sai Intersection",
+      "base_level": 303.413,
+      "max_flood_level": 304.993,
+      "flood_height_from_base": 1.58,
+      "coordinates": {
+        "lat": 18.78245208,
+        "lng": 99.0163563
+      },
+      "image_url": "E01.jpg",
+      "series": "east"
+    },
+    {
+      "id": 2,
+      "code": "E02",
+      "location": "หน้าโรงพยาบาลค่ายกาวิละ",
+      "location_en": "Front of Kawila Hospital",
+      "base_level": 303.37,
+      "max_flood_level": 303.93,
+      "flood_height_from_base": 0.56,
+      "coordinates": {
+        "lat": 18.77815218,
+        "lng": 99.0168376
+      },
+      "image_url": "E02.jpg",
+      "series": "east"
+    },
+    {
+      "id": 3,
+      "code": "E03",
+      "location": "หน้าวัดป่าจึ๋ง",
+      "location_en": "Front of Wat Pa Jeing",
+      "base_level": 303.293,
+      "max_flood_level": 303.763,
+      "flood_height_from_base": 0.47,
+      "coordinates": {
+        "lat": 18.77536208,
+        "lng": 99.0172963
+      },
+      "image_url": "E03.jpg",
+      "series": "east"
+    },
+    {
+      "id": 4,
+      "code": "W01",
+      "location": "โค้งร้านอาหารตามสั่ง",
+      "location_en": "Curve by Food Order Shop",
+      "base_level": 303.632,
+      "max_flood_level": 304.432,
+      "flood_height_from_base": 0.8,
+      "coordinates": {
+        "lat": 18.77204508,
+        "lng": 98.9969449
+      },
+      "image_url": "W01.jpg",
+      "series": "west"
+    },
+    {
+      "id": 5,
+      "code": "W02",
+      "location": "ตรงข้าม หางหุ้นส่วนจำกัด พัทธ์พรรณี",
+      "location_en": "Opposite Phatpannee Partnership",
+      "base_level": 303.223,
+      "max_flood_level": 303.973,
+      "flood_height_from_base": 0.75,
+      "coordinates": {
+        "lat": 18.77055058,
+        "lng": 98.9963767
+      },
+      "image_url": "W02.jpg",
+      "series": "west"
+    },
+    {
+      "id": 6,
+      "code": "W03",
+      "location": "หน้าร้านขายยาบ้านหม่อน",
+      "location_en": "Front of Ban Mon Pharmacy",
+      "base_level": 302.814,
+      "max_flood_level": 303.514,
+      "flood_height_from_base": 0.7,
+      "coordinates": {
+        "lat": 18.76906058,
+        "lng": 98.9958084
+      },
+      "image_url": "W03.jpg",
+      "series": "west"
+    }
+  ]
+}
